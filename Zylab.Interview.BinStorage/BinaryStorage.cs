@@ -11,6 +11,7 @@ namespace Zylab.Interview.BinStorage {
 		Dictionary<string, Int64> index = new Dictionary<string, Int64> ();
 		readonly FileStream storageSream;
 		readonly object writeLock = new object();
+		readonly string storageFile;
 
         public BinaryStorage(StorageConfiguration configuration) {
 
@@ -30,18 +31,31 @@ namespace Zylab.Interview.BinStorage {
 				positionToWrite = storageSream.Length;
 				storageSream.Seek (data.Length, SeekOrigin.End);
 			}
+
+			using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write)) {
+				writeStream.Seek (positionToWrite, SeekOrigin.Begin);
+				data.CopyTo (writeStream);
+			}
+
+			index.Add (key, positionToWrite);
         }
 
         public Stream Get(string key) {
-            throw new NotImplementedException();
+			if (!index.ContainsKey (key))
+				throw new Exception ();
+
+			var positionToRead = index [key];
+			var readStream = new WindowStream(new FileStream (storageFile, FileMode.Open, FileAccess.Read), positionToRead, 0);
+			return readStream;
         }
 
         public bool Contains(string key) {
-            throw new NotImplementedException();
+			return index.ContainsKey (key);
         }
 
         public void Dispose() {
-            throw new NotImplementedException();
+			storageSream.Dispose ();
         }
+
     }
 }
