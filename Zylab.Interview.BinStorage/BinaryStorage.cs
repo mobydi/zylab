@@ -44,7 +44,7 @@ namespace Zylab.Interview.BinStorage
 
             byte[] md5;
 			using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) {
-				writeStream.Seek (positionToWrite, SeekOrigin.Begin);
+                writeStream.Seek (positionToWrite, SeekOrigin.Begin);
 				md5 = data.CopyToWithMD5 (writeStream);
                 writeStream.Flush(true);
 			}
@@ -94,7 +94,7 @@ namespace Zylab.Interview.BinStorage
 		{
 			PrimitiveSerializer.Int64.WriteTo (value.Position, stream);
 			PrimitiveSerializer.Int64.WriteTo (value.Length, stream);
-			stream.Write (value.MD5, 0, value.Length);
+			stream.Write (value.MD5, 0, value.MD5.Length);
 		}
 		public Data ReadFrom (Stream stream)
 		{
