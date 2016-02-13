@@ -37,6 +37,7 @@ namespace Zylab.Interview.BinStorage
 			if (data == null)
 				throw new ArgumentNullException ();
 
+            //TODO: lock here!!!
 			if (index.ContainsKey (key))
 				throw new ArgumentException ();
 		
