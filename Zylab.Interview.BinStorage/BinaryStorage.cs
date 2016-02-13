@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 
 namespace Zylab.Interview.BinStorage
 {
@@ -29,13 +28,14 @@ namespace Zylab.Interview.BinStorage
 				storageSream.Seek (data.Length, SeekOrigin.End);
 			}
 
+            byte[] md5;
 			using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) {
 				writeStream.Seek (positionToWrite, SeekOrigin.Begin);
-				data.CopyTo (writeStream);
+				md5 = data.CopyToWithMD5 (writeStream);
                 writeStream.Flush(true);
 			}
             lock(writeLock)
-			    index.Add (key, new Data {Position = positionToWrite, Length = data.Length, MD5 = "MD5"});
+			    index.Add (key, new Data {Position = positionToWrite, Length = data.Length, MD5 = md5});
         }
 
         public Stream Get(string key) {
@@ -63,6 +63,6 @@ namespace Zylab.Interview.BinStorage
 	{
 		public Int64 Position { get; set;}
 		public Int64 Length { get; set; }
-		public string MD5 { get; set; }
+		public byte[] MD5 { get; set; }
 	}
 }

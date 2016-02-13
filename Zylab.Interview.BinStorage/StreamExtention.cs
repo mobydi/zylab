@@ -5,7 +5,7 @@ namespace Zylab.Interview.BinStorage
 {
     public static class StreamExtention
     {
-        public static byte[] CopyToWithMD5(this Stream source, Stream destination, int bufferSize)
+        public static byte[] CopyToWithMD5(this Stream source, Stream destination, int bufferSize = 81920)
         {
             using (MD5 md5Hasher = MD5.Create())
             {
