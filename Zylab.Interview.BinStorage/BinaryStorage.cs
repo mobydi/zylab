@@ -8,7 +8,7 @@ using System.IO.MemoryMappedFiles;
 namespace Zylab.Interview.BinStorage {
     public class BinaryStorage : IBinaryStorage {
 
-		Dictionary<string, Int64> index = new Dictionary<string, Int64> ();
+		Dictionary<string, Data> index = new Dictionary<string, Data> ();
 		readonly FileStream storageSream;
 		readonly object writeLock = new object();
 		readonly string storageFile;
@@ -16,9 +16,7 @@ namespace Zylab.Interview.BinStorage {
         public BinaryStorage(StorageConfiguration configuration) {
 
 			storageFile = Path.Combine (configuration.WorkingFolder, "storage.bin");
-			if (!File.Exists (storageFile))
-				File.Create (storageFile).Close ();
-			storageSream = new FileStream(storageFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None,
+			storageSream = new FileStream(storageFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None,
 				        bufferSize: 4096, useAsync: true);
         }
 
@@ -37,15 +35,18 @@ namespace Zylab.Interview.BinStorage {
 				data.CopyTo (writeStream);
 			}
 
-			index.Add (key, positionToWrite);
+			index.Add (key, new Data {Position = positionToWrite, Length = data.Length, MD5 = "MD5"});
         }
 
         public Stream Get(string key) {
-			if (!index.ContainsKey (key))
+
+			Data data;
+			if (!index.TryGetValue (key, out data))
 				throw new Exception ();
 
-			var positionToRead = index [key];
-			var readStream = new WindowStream(new FileStream (storageFile, FileMode.Open, FileAccess.Read), positionToRead, 0);
+			var readStream = new WindowStream(
+				new FileStream (storageFile, FileMode.Open, FileAccess.Read), 
+				data.Position, data.Length);
 			return readStream;
         }
 
@@ -58,4 +59,11 @@ namespace Zylab.Interview.BinStorage {
         }
 
     }
+
+	public struct Data
+	{
+		public Int64 Position { get; set;}
+		public Int64 Length { get; set; }
+		public string MD5 { get; set; }
+	}
 }

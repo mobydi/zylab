@@ -14,9 +14,9 @@ namespace Zylab.Interview.BinStorage
 
 		public override int Read (byte[] buffer, int offset, int count)
 		{
-			if (steam.Position + count <= end)
+			if (stream.Position + count <= end)
 				throw new ArgumentOutOfRangeException ();
-			steam.Read (buffer, offset, count);
+			stream.Read (buffer, offset, count);
 		}
 
 		public override long Seek (long offset, SeekOrigin origin)
@@ -69,7 +69,7 @@ namespace Zylab.Interview.BinStorage
 
 		#endregion
 
-		readonly FileStream steam;
+		readonly FileStream stream;
 		readonly Int64 start;
 		readonly Int64 length;
 		readonly Int64 end;
@@ -81,10 +81,15 @@ namespace Zylab.Interview.BinStorage
 			
 			this.length = length;
 			this.start = start;
-			this.steam = stream;
+			this.stream = stream;
 			this.end = start + length;
 
 			stream.Seek (start);
+		}
+
+		public override void Dispose ()
+		{
+			stream.Dispose ();
 		}
 	}
 }
