@@ -10,14 +10,15 @@ namespace Zylab.Interview.BinStorage
         {
             using (MD5 md5Hasher = MD5.Create())
             {
+                var halfBuffer = bufferSize / 2;
                 byte[][] buffer = new byte[2][];
-                buffer[0] = new byte[bufferSize/2];
-                buffer[1] = new byte[bufferSize/2];
+                buffer[0] = new byte[halfBuffer];
+                buffer[1] = new byte[halfBuffer];
                 int current_read_buffer = 0;
 
                 int readBytes;
                 Task writeOperation = null;
-                while ((readBytes = source.Read(buffer[current_read_buffer], 0, bufferSize/2)) > 0)
+                while ((readBytes = source.Read(buffer[current_read_buffer], 0, halfBuffer)) > 0)
                 {
                     if(writeOperation != null)
                     {
