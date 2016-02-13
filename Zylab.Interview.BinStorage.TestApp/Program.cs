@@ -27,6 +27,7 @@ namespace Zylab.Interview.BinStorage.TestApp
 			using (var storage = new BinaryStorage(new StorageConfiguration() { WorkingFolder = args[1] }))
 			{
 				Directory.EnumerateFiles(args[0], "*", SearchOption.AllDirectories)
+					.Where(file => (File.GetAttributes(file) & FileAttributes.Hidden) != FileAttributes.Hidden)
 					.AsParallel().WithDegreeOfParallelism(4).ForAll(s =>
 					{
 						AddFile(storage, s);
@@ -41,6 +42,7 @@ namespace Zylab.Interview.BinStorage.TestApp
 			using (var storage = new BinaryStorage(new StorageConfiguration() { WorkingFolder = args[1] }))
 			{
 				Directory.EnumerateFiles(args[0], "*", SearchOption.AllDirectories)
+					.Where(file => (File.GetAttributes(file) & FileAttributes.Hidden) != FileAttributes.Hidden)
 					.AsParallel().WithDegreeOfParallelism(4).ForAll(s =>
 					{
 						using (var resultStream = storage.Get(s)) {
@@ -65,6 +67,8 @@ namespace Zylab.Interview.BinStorage.TestApp
 					});
 			}
 			Console.WriteLine("Time to verify: " + sw.Elapsed);
+
+			Console.ReadLine ();
 		}
 
 		static void AddFile(IBinaryStorage storage, string fileName)
