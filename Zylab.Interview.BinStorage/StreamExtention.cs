@@ -17,24 +17,25 @@ namespace Zylab.Interview.BinStorage
                 int current_read_buffer = 0;
 
                 int readBytes;
-                Task writeOperation = null;
+                Task asyncTask = null;
                 while ((readBytes = source.Read(buffer[current_read_buffer], 0, halfBuffer)) > 0)
                 {
-                    if(writeOperation != null)
+                    if(asyncTask != null)
                     {
-                        writeOperation.Wait();
+                        asyncTask.Wait();
                     }
-					writeOperation = destination.WriteAsync(buffer[current_read_buffer], 0, readBytes);
-                    md5Hasher.TransformBlock(buffer[current_read_buffer], 0, readBytes, buffer[current_read_buffer], 0);
+					var writeOperation = destination.WriteAsync(buffer[current_read_buffer], 0, readBytes);
+                    var md5Operation = Task.Run(() => md5Hasher.TransformBlock(buffer[current_read_buffer], 0, readBytes, buffer[current_read_buffer], 0));
+                    asyncTask = Task.WhenAll(writeOperation, md5Operation);
                     current_read_buffer = current_read_buffer == 0 ? 1 : 0;
                 }
-
-                md5Hasher.TransformFinalBlock(new byte[0], 0, 0);
-                if (writeOperation != null)
+              
+                if (asyncTask != null)
                 {
-                    writeOperation.Wait();
+                    asyncTask.Wait();
                 }
-
+        
+                md5Hasher.TransformFinalBlock(new byte[0], 0, 0);
                 return md5Hasher.Hash;
             }
         }
