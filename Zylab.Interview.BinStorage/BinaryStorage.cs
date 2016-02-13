@@ -48,11 +48,9 @@ namespace Zylab.Interview.BinStorage
 				md5 = data.CopyToWithMD5 (writeStream);
                 writeStream.Flush(true);
 			}
-
-			lock (seekLock) {
-				index.Add (key, new Data { Position = positionToWrite, Length = data.Length, MD5 = md5 });
-				index.Commit ();
-			}
+				
+			index.Add (key, new Data { Position = positionToWrite, Length = data.Length, MD5 = md5 });
+			index.Commit (); //TODO: 
         }
 
         public Stream Get(string key) {
