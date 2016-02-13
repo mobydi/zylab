@@ -14,8 +14,8 @@ namespace Zylab.Interview.BinStorage
 
 		public override int Read (byte[] buffer, int offset, int count)
 		{
-			if (stream.Position + count <= end)
-				throw new ArgumentOutOfRangeException ();
+			if (stream.Position + count> end)
+				count = (int)(end - stream.Position);
 			return stream.Read (buffer, offset, count);
 		}
 

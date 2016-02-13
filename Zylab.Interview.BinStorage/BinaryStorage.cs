@@ -8,7 +8,7 @@ using System.IO.MemoryMappedFiles;
 namespace Zylab.Interview.BinStorage {
     public class BinaryStorage : IBinaryStorage {
 
-		Dictionary<string, Data> index = new Dictionary<string, Data> ();
+		static Dictionary<string, Data> index = new Dictionary<string, Data> ();
 		readonly FileStream storageSream;
 		readonly object writeLock = new object();
 		readonly string storageFile;
@@ -16,7 +16,7 @@ namespace Zylab.Interview.BinStorage {
         public BinaryStorage(StorageConfiguration configuration) {
 
 			storageFile = Path.Combine (configuration.WorkingFolder, "storage.bin");
-			storageSream = new FileStream(storageFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None,
+			storageSream = new FileStream(storageFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite,
 				        bufferSize: 4096, useAsync: true);
         }
 
@@ -30,12 +30,13 @@ namespace Zylab.Interview.BinStorage {
 				storageSream.Seek (data.Length, SeekOrigin.End);
 			}
 
-			using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write)) {
+			using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) {
 				writeStream.Seek (positionToWrite, SeekOrigin.Begin);
 				data.CopyTo (writeStream);
+                writeStream.Flush(true);
 			}
-
-			index.Add (key, new Data {Position = positionToWrite, Length = data.Length, MD5 = "MD5"});
+            lock(writeLock)
+			    index.Add (key, new Data {Position = positionToWrite, Length = data.Length, MD5 = "MD5"});
         }
 
         public Stream Get(string key) {
@@ -45,7 +46,7 @@ namespace Zylab.Interview.BinStorage {
 				throw new Exception ();
 
 			var readStream = new WindowStream(
-				new FileStream (storageFile, FileMode.Open, FileAccess.Read), 
+				new FileStream (storageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), 
 				data.Position, data.Length);
 			return readStream;
         }
@@ -59,6 +60,12 @@ namespace Zylab.Interview.BinStorage {
         }
 
     }
+
+    public static class StreamMD5
+    {
+
+    }
+
 
 	public struct Data
 	{
