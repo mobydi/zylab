@@ -16,7 +16,7 @@ namespace Zylab.Interview.BinStorage
 		{
 			if (stream.Position + count <= end)
 				throw new ArgumentOutOfRangeException ();
-			stream.Read (buffer, offset, count);
+			return stream.Read (buffer, offset, count);
 		}
 
 		public override long Seek (long offset, SeekOrigin origin)
@@ -84,12 +84,15 @@ namespace Zylab.Interview.BinStorage
 			this.stream = stream;
 			this.end = start + length;
 
-			stream.Seek (start);
+			stream.Seek (start, SeekOrigin.Begin);
 		}
 
-		public override void Dispose ()
+		protected override void Dispose (bool disposing)
 		{
-			stream.Dispose ();
+			if (disposing)
+				stream.Dispose ();
+
+			base.Dispose (disposing);
 		}
 	}
 }
