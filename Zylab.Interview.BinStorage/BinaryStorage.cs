@@ -14,13 +14,18 @@ namespace Zylab.Interview.BinStorage
         public BinaryStorage(StorageConfiguration configuration) {
 
 			storageFile = Path.Combine (configuration.WorkingFolder, "storage.bin");
-			storageSream = new FileStream(storageFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite,
-				        bufferSize: 4096, useAsync: true);
+			storageSream = new FileStream(storageFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096);
         }
 
         public void Add(string key, Stream data) {
+			if (string.IsNullOrEmpty (key))
+				throw new ArgumentNullException ();
+
+			if (data == null)
+				throw new ArgumentNullException ();
+
 			if (index.ContainsKey (key))
-				throw new Exception ();
+				throw new ArgumentException ();
 		
 			Int64 positionToWrite;
 			lock (writeLock) {
@@ -39,10 +44,12 @@ namespace Zylab.Interview.BinStorage
         }
 
         public Stream Get(string key) {
-
+			if (string.IsNullOrEmpty (key))
+				throw new ArgumentNullException ();
+			
 			Data data;
 			if (!index.TryGetValue (key, out data))
-				throw new Exception ();
+				throw new KeyNotFoundException ();
 
 			var readStream = new WindowStream(
 				new FileStream (storageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), 
