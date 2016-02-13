@@ -66,7 +66,7 @@ namespace Zylab.Interview.BinStorage
 				throw new KeyNotFoundException ();
 
 			var readStream = new WindowStream(
-				new FileStream (storageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), 
+				new FileStream (storageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.SequentialScan), 
 				data.Position, data.Length);
 			return readStream;
         }
