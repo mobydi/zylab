@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using CSharpTest.Net.Collections;
 using CSharpTest.Net.Serialization;
-using System.Runtime.InteropServices;
 
 namespace Zylab.Interview.BinStorage
 {
@@ -17,8 +16,10 @@ namespace Zylab.Interview.BinStorage
 			var options = new BPlusTree<string, Data>.OptionsV2 (PrimitiveSerializer.String, new DataSerializer());
 			options.CreateFile = CreatePolicy.IfNeeded;
 			options.FileName = Path.Combine (configuration.WorkingFolder, "index.bin");
+			options.TransactionLogFileName = Path.Combine (configuration.WorkingFolder, "index.tlog");
 			options.CachePolicy = CachePolicy.Recent;
-			options.CacheKeepAliveMaximumHistory = 50*1024*1024 / (50*8 + Marshal.SizeOf(typeof(Data)));
+			options.CacheKeepAliveMaximumHistory = 125000; // ~50Mb of cached objects;
+			options.CalcBTreeOrder (50, 8+8+16);
 			index = new BPlusTree<string, Data> (options);
 
 			storageFile = Path.Combine (configuration.WorkingFolder, "storage.bin");
@@ -47,8 +48,11 @@ namespace Zylab.Interview.BinStorage
 				md5 = data.CopyToWithMD5 (writeStream);
                 writeStream.Flush(true);
 			}
-				
-		    index.Add (key, new Data {Position = positionToWrite, Length = data.Length, MD5 = md5});
+
+			lock (seekLock) {
+				index.Add (key, new Data { Position = positionToWrite, Length = data.Length, MD5 = md5 });
+				index.Commit ();
+			}
         }
 
         public Stream Get(string key) {
@@ -88,24 +92,16 @@ namespace Zylab.Interview.BinStorage
 		#region ISerializer implementation
 		public void WriteTo (Data value, Stream stream)
 		{
-			var pos = BitConverter.GetBytes (value.Position);
-			var len = BitConverter.GetBytes (value.Length);
-
-			stream.Write (pos, 0, pos.Length);
-			stream.Write (len, 0, len.Length);
-			stream.Write (value.MD5, 0, value.MD5.Length);
+			PrimitiveSerializer.Int64.WriteTo (value.Position, stream);
+			PrimitiveSerializer.Int64.WriteTo (value.Length, stream);
+			stream.Write (value.MD5, 0, value.Length);
 		}
 		public Data ReadFrom (Stream stream)
 		{
-			var buffer = new byte[8];
-			stream.Read (buffer, 0, buffer.Length);
-			var pos = BitConverter.ToInt64 (buffer, 0);
-
-			stream.Read (buffer, 0, buffer.Length);
-			var len = BitConverter.ToInt64 (buffer, 0);
-
+			var pos = PrimitiveSerializer.Int64.ReadFrom(stream);
+			var len = PrimitiveSerializer.Int64.ReadFrom(stream);
 			var md5 = new byte[16];
-			stream.Read (buffer, 0, buffer.Length);
+			stream.Read (md5, 0, md5.Length);
 
 			return new Data{ Position = pos, Length = len, MD5 = md5 };
 		}
