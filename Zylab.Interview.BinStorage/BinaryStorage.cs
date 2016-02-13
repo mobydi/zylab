@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
-using System.IO.MemoryMappedFiles;
+using System.Security.Cryptography;
 
-namespace Zylab.Interview.BinStorage {
+namespace Zylab.Interview.BinStorage
+{
     public class BinaryStorage : IBinaryStorage {
 
 		static Dictionary<string, Data> index = new Dictionary<string, Data> ();
@@ -58,14 +57,7 @@ namespace Zylab.Interview.BinStorage {
         public void Dispose() {
 			storageSream.Dispose ();
         }
-
     }
-
-    public static class StreamMD5
-    {
-
-    }
-
 
 	public struct Data
 	{
