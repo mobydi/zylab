@@ -42,7 +42,7 @@ namespace Zylab.Interview.BinStorage
 				throw new ArgumentNullException ();
 			
 			try {
-				if (currentWritings.TryAdd (key, null))
+				if (!currentWritings.TryAdd (key, null))
 					throw new ArgumentException ();
 
 				if (index.ContainsKey (key))
