@@ -1,29 +1,18 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Zylab.Interview.BinStorage 
 
-### What is this repository for? ###
+### Open source libs ###
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* BPlusTree from (https://github.com/csharptest/CSharpTest.Net.Collections)
+* NuGet (https://www.nuget.org)
 
-### How do I get set up? ###
+### Solution limitation ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+* TODO:
+* TODO:
 
-### Contribution guidelines ###
+### Notes ###
 
-* Writing tests
-* Code review
-* Other guidelines
 
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+* Wouldn't implement custom b tree, lru cache or skip lists
