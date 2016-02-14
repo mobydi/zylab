@@ -1,20 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using CSharpTest.Net.Collections;
 using CSharpTest.Net.Serialization;
 using CSharpTest.Net.Synchronization;
-using System.Runtime.InteropServices;
 
 namespace Zylab.Interview.BinStorage
 {
     public class BinaryStorage : IBinaryStorage {
-		readonly BPlusTree<string, Data> index;
-		readonly FileStream storageStream;
-		readonly object seekLock = new object();
-		readonly string storageFile;
+		private const int cacheSize = 200 * 1024 * 1024; //200MB
+		private const int writeBufferSize = 81920;
+		private const int estimatedKeySize = 50;
+		private readonly int estimatedDataSize = DataSerializer.GetEstimatedSize();
 
-        const int writeBufferSize = 81920;
+		private readonly BPlusTree<string, Data> index;
+		private readonly FileStream storageStream;
+		private readonly object seekLock = new object();
+		private readonly string storageFile;
+		private readonly ConcurrentDictionary<string, object> currentWritings = new ConcurrentDictionary<string, object>();
 
         public BinaryStorage(StorageConfiguration configuration) {
 			var options = new BPlusTree<string, Data>.OptionsV2 (PrimitiveSerializer.String, new DataSerializer());
@@ -22,8 +26,8 @@ namespace Zylab.Interview.BinStorage
 			options.FileName = Path.Combine (configuration.WorkingFolder, "index.bin");
             options.CallLevelLock = new ReaderWriterLocking();
 			options.CachePolicy = CachePolicy.Recent;
-			options.CacheKeepAliveMaximumHistory = 125000; // ~50Mb of cached objects;
-			options.CalcBTreeOrder (50, 8+8+16);
+			options.CacheKeepAliveMaximumHistory = cacheSize / (estimatedKeySize + estimatedDataSize);
+			options.CalcBTreeOrder (estimatedKeySize, estimatedDataSize);
 			index = new BPlusTree<string, Data> (options);
 
 			storageFile = Path.Combine (configuration.WorkingFolder, "storage.bin");
@@ -36,25 +40,33 @@ namespace Zylab.Interview.BinStorage
 
 			if (data == null)
 				throw new ArgumentNullException ();
+			
+			try {
+				if (currentWritings.TryAdd (key, null))
+					throw new ArgumentException ();
 
-            //TODO: lock here!!!
-			if (index.ContainsKey (key))
-				throw new ArgumentException ();
-		
-			Int64 positionToWrite;
-			lock (seekLock) {
-				positionToWrite = storageStream.Length;
-				storageStream.SetLength(storageStream.Length + data.Length);
+				if (index.ContainsKey (key))
+					throw new ArgumentException ();
+			
+				Int64 positionToWrite;
+				lock (seekLock) {
+					positionToWrite = storageStream.Length;
+					storageStream.SetLength(storageStream.Length + data.Length);
+				}
+		       
+		        byte[] md5;
+		        using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write, FileShare.ReadWrite, writeBufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.WriteThrough)) {
+		            writeStream.Seek (positionToWrite, SeekOrigin.Begin);
+		            md5 = data.CopyToWithMD5 (writeStream, writeBufferSize);
+		            writeStream.Flush(true);
+		        }
+
+				index.Add (key, new Data { Position = positionToWrite, Length = data.Length, MD5 = md5 });
 			}
-           
-            byte[] md5;
-            using (var writeStream = new FileStream (storageFile, FileMode.Open, FileAccess.Write, FileShare.ReadWrite, writeBufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.WriteThrough)) {
-                writeStream.Seek (positionToWrite, SeekOrigin.Begin);
-                md5 = data.CopyToWithMD5 (writeStream, writeBufferSize);
-                writeStream.Flush(true);
-            }
-
-			index.Add (key, new Data { Position = positionToWrite, Length = data.Length, MD5 = md5 });
+			finally {
+				object value;
+				currentWritings.TryRemove (key, out value);
+			}
         }
 
         public Stream Get(string key) {
@@ -66,7 +78,7 @@ namespace Zylab.Interview.BinStorage
 				throw new KeyNotFoundException ();
 
 			var readStream = new WindowStream(
-				new FileStream (storageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.SequentialScan), 
+				new FileStream (storageFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, writeBufferSize, FileOptions.SequentialScan), 
 				data.Position, data.Length);
 			return readStream;
         }
@@ -80,33 +92,4 @@ namespace Zylab.Interview.BinStorage
 			index.Dispose ();
         }
     }
-
-	struct Data
-	{
-		public Int64 Position { get; set;}
-		public Int64 Length { get; set; }
-		public byte[] MD5 { get; set; }
-	}
-
-
-	class DataSerializer : ISerializer<Data>
-	{
-		#region ISerializer implementation
-		public void WriteTo (Data value, Stream stream)
-		{
-			PrimitiveSerializer.Int64.WriteTo (value.Position, stream);
-			PrimitiveSerializer.Int64.WriteTo (value.Length, stream);
-			stream.Write (value.MD5, 0, value.MD5.Length);
-		}
-		public Data ReadFrom (Stream stream)
-		{
-			var pos = PrimitiveSerializer.Int64.ReadFrom(stream);
-			var len = PrimitiveSerializer.Int64.ReadFrom(stream);
-			var md5 = new byte[16];
-			stream.Read (md5, 0, md5.Length);
-
-			return new Data{ Position = pos, Length = len, MD5 = md5 };
-		}
-		#endregion
-	}
 }
