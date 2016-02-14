@@ -20,4 +20,6 @@ Zylab.Interview.BinStorage
 ### Solution limitation ###
 
 * I have not provide thread pool or any limits on thread number
-* I wouldn't implement custom btree, lru cache, sorry
+* I can get rid of ConcurrentDictionary, used to prevent concurrent adding.
+ E.x. lock-free linked list is good enough, for small number of values. 
+* I wouldn't implement custom btree, lru cache, linked list, sorry
